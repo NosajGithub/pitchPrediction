@@ -138,7 +138,7 @@ Make_pitcher_batter_priors <- function(pdata){
                 pdata[,paste0("BP_S_",the_pitch_type)] <- (n * s + beta * p) / (n + beta)
         }
 
-        pdata[, -which(names(pdata) %in% c(paste0(unique_pitches),paste0(unique_pitches,"_b"),"total","total_b")]
+        pdata[, -which(names(pdata) %in% c(paste0(unique_pitches),paste0(unique_pitches,"_b"),"total","total_b"))]
 }
 
 Make_season_pitches <- function(pdata) {
