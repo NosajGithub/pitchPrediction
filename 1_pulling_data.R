@@ -5,9 +5,13 @@ SetUpDb <- function(){
         db <- src_sqlite("new-db.sqlite3", create = TRUE)
         scrape(start = "2008-01-01", end = Sys.Date(), connect = db$c)
         
+        # not sure if this scrape is needed or if we can just add players.xml to the scrape above
+        scrape(start = '2014-09-01', end = Sys.Date(), suffix = "players.xml", connect = db$c)
+        
         dbSendQuery(db$con, 'CREATE INDEX pitcher_idx ON atbat(pitcher_name)')
         dbSendQuery(db$con, 'CREATE INDEX pitch_idx ON pitch(gameday_link, num)')
         dbSendQuery(db$con, 'CREATE INDEX gameday_link_idx ON atbat(gameday_link)')
+        dbSendQuery(db$con, 'CREATE INDEX position_idx ON player(current_position)')
 }
 
 UpdateDb <- function(){
@@ -49,5 +53,11 @@ PullData_AtBats <- function(selected_pitcher = 'Justin Verlander', db){
         full_atbats
 }
 
+PullData_Catchers <- function(db) {
+        catchers <- tbl(db, 'player') %>%
+                filter(current_position == 'C') %>%
+                select(gameday_link,boxname)
+        catchers
+}
 
 
