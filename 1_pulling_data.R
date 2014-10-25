@@ -3,10 +3,7 @@
 
 SetUpDb <- function(){
         db <- src_sqlite("new-db.sqlite3", create = TRUE)
-        scrape(start = "2008-01-01", end = Sys.Date(), connect = db$c)
-        
-        # not sure if this scrape is needed or if we can just add players.xml to the scrape above
-        scrape(start = '2008-01-01', end = Sys.Date(), suffix = "players.xml", connect = db$c)
+        scrape(start = "2008-01-01", end = Sys.Date(), suffix = c("players.xml","inning/inning_all.xml"), connect = db$c)
         
         dbSendQuery(db$con, 'CREATE INDEX pitcher_idx ON atbat(pitcher_name)')
         dbSendQuery(db$con, 'CREATE INDEX pitch_idx ON pitch(gameday_link, num)')
@@ -22,7 +19,7 @@ UpdateDb <- function(){
         dbDisconnect(db$con)
 }
 
-PullData_Pitches <- function(selected_pitcher = 'Justin Verlander', db){
+PullData_Pitches <- function(selected_pitcher, db){
         atbats <- tbl(db, 'atbat') %>%
                 filter(pitcher_name == selected_pitcher) %>%
                 select(num, gameday_link, stand, batter_name, pitcher_name, event, atbat_des)
@@ -56,8 +53,9 @@ PullData_AtBats <- function(selected_pitcher = 'Justin Verlander', db){
 PullData_Catchers <- function(db) {
         catchers <- tbl(db, 'player') %>%
                 filter(current_position == 'C') %>%
-                select(gameday_link,boxname)
-        catchers
+                filter(bat_order != "NA") %>%
+                select(gameday_link,type,boxname)
+        catchers$inning_side <- ifelse(catchers$type == "home","top","bottom")
+        catchers[,c("gameday_link","boxname","inning_side")]
 }
-
 

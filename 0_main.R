@@ -18,6 +18,7 @@ source("3_predictions.R")
 db <- src_sqlite("new-db.sqlite3")
 pdata <- PullData_Pitches(selected_pitcher = 'Justin Verlander', db = db)
 full_atbats <- PullData_AtBats(selected_pitcher = 'Justin Verlander', db = db)
+catchers <- PullData_Catchers(db = db)
 
 # Add variables
 pdata <- Make_year(pdata)
@@ -31,6 +32,7 @@ pdata <- Make_score_differential(pdata, full_atbats)
 pdata <- Make_pitcher_count_priors(pdata)
 pdata <- Make_season_pitches(pdata)
 pdata <- Make_times_faced(pdata)
+pdata <- Make_catcher(pdata)
 
 
 

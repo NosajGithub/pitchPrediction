@@ -191,4 +191,9 @@ Make_pitcher_count_priors <- function(pdata){
         pdata[, -which(names(pdata) %in% paste0(unique_pitches,"_count"))]
 }
 
+Make_catcher <- function(pdata, catchers){
+        # Left join pitch table with catchers on gameday_link, inning side
+        
+}
+
 
