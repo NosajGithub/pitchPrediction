@@ -137,6 +137,7 @@ Make_pitcher_batter_priors <- function(pdata){
                 pdata[,paste0("BP_",the_pitch_type)] <- s
                 pdata[,paste0("BP_S_",the_pitch_type)] <- (n * s + beta * p) / (n + beta)
         }
+
         pdata[, -which(names(pdata) %in% c(paste0(unique_pitches),paste0(unique_pitches,"_b"),"total","total_b")]
         
         unique_pitches_v <- paste0(unique(verlander2$pitch_type)) #paste0 for NAs
