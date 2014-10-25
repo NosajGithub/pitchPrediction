@@ -139,8 +139,6 @@ Make_pitcher_batter_priors <- function(pdata){
         }
 
         pdata[, -which(names(pdata) %in% c(paste0(unique_pitches),paste0(unique_pitches,"_b"),"total","total_b")]
-        
-        unique_pitches_v <- paste0(unique(verlander2$pitch_type)) #paste0 for NAs
 }
 
 Make_season_pitches <- function(pdata) {
