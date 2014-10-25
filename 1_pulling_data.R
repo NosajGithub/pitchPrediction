@@ -6,7 +6,7 @@ SetUpDb <- function(){
         scrape(start = "2008-01-01", end = Sys.Date(), connect = db$c)
         
         # not sure if this scrape is needed or if we can just add players.xml to the scrape above
-        scrape(start = '2014-09-01', end = Sys.Date(), suffix = "players.xml", connect = db$c)
+        scrape(start = '2008-01-01', end = Sys.Date(), suffix = "players.xml", connect = db$c)
         
         dbSendQuery(db$con, 'CREATE INDEX pitcher_idx ON atbat(pitcher_name)')
         dbSendQuery(db$con, 'CREATE INDEX pitch_idx ON pitch(gameday_link, num)')
