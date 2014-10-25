@@ -26,6 +26,8 @@ pdata <- Make_runners(pdata)
 pdata <- Make_pitch_count(pdata)
 pdata <- Make_score_differential(pdata, full_atbats)
 #pdata <- Make_pitcher_batter_priors(pdata) # Warning: Takes hours for large numbers of pitches
+                                            # With x rows, it takes about ((.0025*x + .0000165*(x^2))/60) minutes
+pdata <- Make_pitcher_count_priors(pdata)
 pdata <- Make_season_pitches(pdata)
 pdata <- Make_times_faced(pdata)
 

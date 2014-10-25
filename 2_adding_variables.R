@@ -137,7 +137,9 @@ Make_pitcher_batter_priors <- function(pdata){
                 pdata[,paste0("BP_",the_pitch_type)] <- s
                 pdata[,paste0("BP_S_",the_pitch_type)] <- (n * s + beta * p) / (n + beta)
         }
-        pdata
+        pdata[, -which(names(pdata) %in% c(paste0(unique_pitches),paste0(unique_pitches,"_b"),"total","total_b")]
+        
+        unique_pitches_v <- paste0(unique(verlander2$pitch_type)) #paste0 for NAs
 }
 
 Make_season_pitches <- function(pdata) {
@@ -156,5 +158,38 @@ Make_times_faced <- function(pdata){
         pdata
 }
 
+Make_pitcher_count_priors <- function(pdata){
+        # Make global store of counts of pitches in different pitch counts 
+        unique_pitches <- c(paste0(unique(pdata$pitch_type)),"total") #paste0 for NAs
+        unique_counts <- paste0(unique(pdata$count)) #paste0 for NAs
+        count_counter <- as.data.frame(row.names = unique_counts,matrix(nrow = length(unique_counts), 
+                                                                        ncol = length(unique_pitches))) 
+        colnames(count_counter) <- unique_pitches
+        count_counter[,] <- 0
+        
+        # Add in rows to receive counts of pitches in different pitch counts
+        global_pitch_counter <- as.data.frame(matrix(data=rep(0,length(unique_pitches)),1,length(unique_pitches),
+                                                     dimnames = list("",paste0(unique_pitches,"_count"))))
+        pdata <- cbind(pdata, global_pitch_counter)
+        
+        # For each pitch, copy in existing each pitch ratio, then add one to pitch total and overall total for that count
+        count_pitch_types <- length(unique_pitches)
+        for (i in 1:length(pdata$gameday_link)){                
+                the_count <- paste0(pdata[i,"count"])
+                for (k in 1:count_pitch_types){
+                        the_pitch <- unique_pitches[k]
+                        pdata[i,paste0(the_pitch,"_count")] <- count_counter[the_count,paste0(the_pitch)]
+                }
+                count_counter[the_count,paste0(pdata[i,"pitch_type"])] <- count_counter[the_count,paste0(pdata[i,"pitch_type"])] + 1
+                count_counter[the_count,"total"] <- count_counter[the_count,"total"] + 1
+        }
+        
+        #Compute CP Priors
+        for (k in 1:(count_pitch_types - 1)){ #no total
+                the_pitch_type <- unique_pitches[k]
+                pdata[,paste0("PC_",the_pitch_type)] <- pdata[,paste0(the_pitch_type,"_count")] / pdata[,"total_count"]
+        }        
+        pdata[, -which(names(pdata) %in% paste0(unique_pitches,"_count"))]
+}
 
 
