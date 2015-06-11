@@ -33,3 +33,77 @@ def plot_pitch_types(pitcher_data, pitcher_name = 'unspecified'):
 
     #plot
     pitcher_data.plot(title = 'Pitches over time for ' + pitcher_name)
+
+def find_anomalous_pitching_behavior(pitcher_data, min_pitches = 100, pitcher_id = 'pitcher_name', std_dev_thresh = 2, perc_thresh = 20):
+    '''This function uses a control charts methodology to loop through each year of a pitchers history
+    and flag any years where a pitch count is more than a certain number of standard deviations away from the mean.
+    Obviously, we can only start this after 2 years of data, so those first two years simply look at differences
+    between pitch percentages.'''
+    
+    #Run through all the pitchers in the data set and flag them as potentially anomalous with reasons
+    pitchers = pitcher_data[pitcher_id].unique()
+    anomalous_pitcher_dict = {}
+    
+    for pitcher in pitchers:
+        
+        #Aggregate to the yearly level, drop all rows with only NaNs, and fill NaNs with 0s
+        pitch_data = get_pitch_types_by_year(pitcher_data[pitcher_data[pitcher_id] == pitcher])
+        pitch_data = pitch_data.dropna(thresh = 1, axis = 1)
+        pitch_data = pitch_data.fillna(0)
+        
+        ###Handling the first two years###
+        years = pitch_data.index
+        subset = pitch_data.loc[pitch_data.index <= years[1]]
+
+        #Get pitches as a percent of total pitches thrown that year
+        subset_perc = subset.apply(lambda x: x / x.sum() * 100, axis = 1)
+
+        #Calculate the absolute percentage differences between the two years
+        subset_perc_diff = subset_perc.diff().irow(1).abs()
+        pitch_count_sums = subset.sum()
+
+        #Loop through each pitch and check it for criteria
+        for pitch in subset.columns:
+
+            #check if pitch minimum met
+            if pitch_count_sums[pitch] > (min_pitches * 2):
+
+                #Check if the absolute difference in pitch percentages is greater than threshold
+                if subset_perc_diff[pitch] > perc_thresh:
+
+                    #Check for previous entry in dictionary
+                    if pitcher not in anomalous_pitcher_dict.keys():
+
+                        anomalous_pitcher_dict[pitcher] = []
+
+                    #Add the data for the pitcher
+                    anomalous_pitcher_dict[pitcher] += [(years[1], pitch)]
+
+        #Handling subsequent years if there are more
+        if len(years) > 2:
+            for year in years[2:len(years)]:
+
+                #Grab data from all previous years for calculating mean and std_dev and loop through each pitch
+                subset = pitch_data.loc[pitch_data.index < year]
+                for pitch in subset.columns:
+
+                    #Check if there's enough pitches in the year to be considered significant
+                    cur_yr_pitch_total = pitch_data[pitch].loc[year]
+                    if cur_yr_pitch_total >= min_pitches:
+
+                        #Calculate the z_score for the current pitch total
+                        sd = subset[pitch].std()
+                        average = subset[pitch].mean()
+                        cur_z_score = (cur_yr_pitch_total - average) / sd
+
+                        #Check to see if the new value is out of bounds
+                        if cur_z_score > std_dev_thresh:
+
+                            #Check for previous entry in dictionary
+                            if pitcher not in anomalous_pitcher_dict.keys():
+                                anomalous_pitcher_dict[pitcher] = []
+
+                            #Add the data for the pitcher
+                            anomalous_pitcher_dict[pitcher] += [(year, pitch, cur_z_score)]
+                            
+    return anomalous_pitcher_dict
