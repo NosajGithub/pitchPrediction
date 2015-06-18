@@ -12,7 +12,7 @@ library(DBI)
 
 source("1_pulling_data.R")
 source("2_adding_variables.R")
-source("3_predictions.R")
+#source("3_predictions.R")
 
 # Pull data from database
 db <- src_sqlite("new-db.sqlite3")
