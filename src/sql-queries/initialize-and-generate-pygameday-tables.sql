@@ -1,4 +1,4 @@
-create table `game` (
+create table game (
 	game_id varchar(30) not null primary key,
 	game_type varchar(1) not null,
 	local_game_time varchar(10),
@@ -18,14 +18,14 @@ create table `game` (
 	away_wins integer,
 	away_loss integer,
 	status_ind char(1),
-	`date` date,
+	"date" date,
 	day varchar(3),
 	stadium_id integer,
 	stadium_name varchar(40),
 	stadium_location varchar(30)
 );
 
-create table `atbat` (
+create table atbat (
 	/* custom fields */
 	game_id varchar(30) not null,
 	half varchar(10),
@@ -54,7 +54,7 @@ create table `atbat` (
 	primary key (game_id, num)
 );
 
-create table `pitch` (
+create table pitch (
 	/* custom fields */
 	game_id varchar(30) not null,
 	num integer,
@@ -100,8 +100,8 @@ create table `pitch` (
 	primary key(game_id, num, id)
 );
 
-create table `hitchart` (
-	hit_id bigint not null auto_increment primary key,
+create table hitchart (
+	hit_id bigint not null primary key,
 	game_id varchar(30) not null,
 	des varchar(25),
 	x decimal(7,3),
@@ -113,7 +113,7 @@ create table `hitchart` (
 	inning integer
 );
 
-create table `player` (
+create table player (
 	team varchar(3),
 	id integer primary key,
 	pos varchar(3),
