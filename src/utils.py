@@ -82,3 +82,43 @@ def ensemble_voting(predictions_dict):
         final_preds.append(Counter(scores[i]).most_common(1)[0][0])
     
     return pd.Series(final_preds, dtype = 'object')
+
+def save_model(model, model_name, save_dir = '../models/', record_keeping_file = '../models/record_keeping.csv'):
+    '''In order to manage our models, we need to keep track of where and when they came from. Each time
+    this function is called, it serializes 'model' to a file called 'model_name'.pickle in a newly created folder located
+    in 'save_dir' and writes a log of the event as a new line in 'record_keeping_file'
+    '''
+    
+    #Import the serializer and csv writer
+    import pickle
+    from datetime import datetime
+    import os
+    
+    #Create the new folder to house the model
+    new_folder = save_dir + model_name
+    if not os.path.exists(new_folder):
+        os.makedirs(new_folder)
+    
+    #Serialize the model
+    complete_fp = new_folder + '/' + model_name + '.pickle'
+    with open(complete_fp, 'wb') as f:
+        joblib.dump(model, complete_fp)
+    
+    #Write the event to the record-keeping file (format = model_name, serialized_filepath, current_time)
+    with open(record_keeping_file, 'a') as f:
+        f.write(model_name + ',' + complete_fp + ',' + str(datetime.now()) + '\n')
+    
+    return
+
+def run_classifier(classifier, data_dict):
+    """Given a classifier and a data dictionary containing 'train_data' and 'test_data' (as pandas DFs),
+    This runs the classifier and outputs the accuracy of the classifier on the test data."""
+    
+    # Fit a model on all the data and features
+    classifier.fit(data_dict['train_data'], data_dict['train_targets'])
+
+    # Make predictions on dev data
+    dev_predictions = classifier.predict(data_dict['test_data'])
+    
+    # Return the dev performance score.
+    return accuracy_score(data_dict['test_targets'], dev_predictions)

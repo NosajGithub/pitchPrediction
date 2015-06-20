@@ -109,17 +109,17 @@ def find_anomalous_pitching_behavior(pitcher_data, min_pitches = 100, pitcher_id
     return anomalous_pitcher_dict
 	
 def get_date_from_gameday_id(pitch_df):
-'''Function to extract the pitch date from the "gameday_link" column of a pitch DF
-Input:
-    pitch_df: Pandas DF containing the column "gameday_link"
-Output:
-    Same Pandas dataframe as input except that it now contains a new Pandas datetime column in the format "yyyy-mm-dd"'''
+    '''Function to extract the pitch date from the "gameday_link" column of a pitch DF
+    Input:
+        pitch_df: Pandas DF containing the column "gameday_link"
+    Output:
+        Same Pandas dataframe as input except that it now contains a new Pandas datetime column in the format "yyyy-mm-dd"'''
 
-pitch_df['date'] = pitch_df['gameday_link'].str.slice(start = 4, stop = 14)
-pitch_df['date'] = pitch_df['date'].str.replace("_", "-")
-pitch_df['date'] = pd.to_datetime(pitch_df['date'])
+    pitch_df['date'] = pitch_df['gameday_link'].str.slice(start = 4, stop = 14)
+    pitch_df['date'] = pitch_df['date'].str.replace("_", "-")
+    pitch_df['date'] = pd.to_datetime(pitch_df['date'])
 
-return pitch_df
+    return pitch_df
 	
 def split_test_train(pitcher_df, date, date_col = 'date'):
     '''Takes in a pandas df of pitcher data (one or more pitchers) and splits it into testing and training features and targets.
