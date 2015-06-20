@@ -30,14 +30,65 @@ def get_available_rs_tables(cursor, *args, **kwargs):
     header = [colnames[0] for colnames in cur.description]
     return header, rows
 
-def get_rs_pitch_data(cursor, *args, **kwargs):
-    limit_num = kwargs['limit']
+def get_rs_atbat_data(cursor, *args, **kwargs):
     query = """
             select
                 *
             from
-                {0}
-            """.format('pitch')
+                atbat
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_game_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                game
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_hitchart_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                hitchart
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_player_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                player
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_pitch_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                pitch
+            """
     cur = cursor
     cur.execute(query)
     rows = cur.fetchall()
