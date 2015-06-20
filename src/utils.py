@@ -41,3 +41,44 @@ def get_pitcher_sample(pitch_df, pitcher_id_col, sample_size = 25):
     subset_df = pitcher_df[pitcher_df[pitcher_id_col].isin(pitcher_samp)]
     
     return subset_df
+
+def collect_classifier_predictions(data_dict, **kwargs):
+    """Given a data dictionary  containing 'train_data' and 'test_data' (as pandas DFs) and classifiers (kwargs),
+    This runs the classifier and outputs the predictions of each classifier as a dictionary.
+    Input:
+        data_dict: the data dictionary containing all the train/test data/targets
+        kwargs: sequence of classifiers (e.g. RF = RandomForest(), lin_svc = LinearSVC()...
+    Output:
+        dictionary of predictions where the key is the classifier label given in kwargs and the value is a list of predictions"""
+    
+    pred_dict = {}
+    for classifier in kwargs.keys():
+        
+        # Fit a model on all the data and features
+        kwargs[classifier].fit(data_dict['train_data'], data_dict['train_targets'])
+
+        # Make predictions on dev data
+        pred_dict[classifier] = kwargs[classifier].predict(data_dict['test_data'])
+    
+    # Return the dev performance score.
+    return pred_dict
+
+def ensemble_voting(predictions_dict):
+    '''Takes in the predictions dictionary output from collect_classifier_predictions and returns pred with most votes'''
+    
+    from collections import defaultdict, Counter
+    
+    #Instantiate an object to hold the combined scores from each classifier
+    scores = defaultdict(list)
+    
+    #Run through each classifier and get voting predictions
+    for classifier in predictions_dict.keys():
+        
+        for i, prediction in enumerate(predictions_dict[classifier]):
+            scores[i].append(prediction)
+    
+    final_preds = []
+    for i in sorted(scores):
+        final_preds.append(Counter(scores[i]).most_common(1)[0][0])
+    
+    return pd.Series(final_preds, dtype = 'object')

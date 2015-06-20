@@ -108,21 +108,22 @@ def find_anomalous_pitching_behavior(pitcher_data, min_pitches = 100, pitcher_id
                             
     return anomalous_pitcher_dict
 	
-	def get_date_from_gameday_id(pitch_df):
-    '''Function to extract the pitch date from the "gameday_link" column of a pitch DF
-    Input:
-        pitch_df: Pandas DF containing the column "gameday_link"
-    Output:
-        Same Pandas dataframe as input except that it now contains a new Pandas datetime column in the format "yyyy-mm-dd"'''
-    
-    pitch_df['date'] = pitch_df['gameday_link'].str.slice(start = 4, stop = 14)
-    pitch_df['date'] = pitch_df['date'].str.replace("_", "-")
-    pitch_df['date'] = pd.to_datetime(pitch_df['date'])
-    
-    return pitch_df
+def get_date_from_gameday_id(pitch_df):
+'''Function to extract the pitch date from the "gameday_link" column of a pitch DF
+Input:
+    pitch_df: Pandas DF containing the column "gameday_link"
+Output:
+    Same Pandas dataframe as input except that it now contains a new Pandas datetime column in the format "yyyy-mm-dd"'''
+
+pitch_df['date'] = pitch_df['gameday_link'].str.slice(start = 4, stop = 14)
+pitch_df['date'] = pitch_df['date'].str.replace("_", "-")
+pitch_df['date'] = pd.to_datetime(pitch_df['date'])
+
+return pitch_df
 	
-	def split_test_train(pitcher_df, date, date_col = 'date'):
-    '''Takes in a pandas df of pitcher data (one or more pitchers) and splits it into testing and trainnig features and targets
+def split_test_train(pitcher_df, date, date_col = 'date'):
+    '''Takes in a pandas df of pitcher data (one or more pitchers) and splits it into testing and training features and targets.
+    It also splits Categorical variables up and binarizes them as their own columns
     Input Args:
         pitcher_df: Pandas dataframe containing all pitch data for a single pitcher
         date: string in the form yyyy-mm-dd, specifying the cutoff for splitting test/train
@@ -133,11 +134,16 @@ def find_anomalous_pitching_behavior(pitcher_data, min_pitches = 100, pitcher_id
             test_data: Pandas feature DF for testing data
             test_targets: Pandas Series of testing data targets (pitch_type)'''
     
+    #Reshaping
+    from pandas.core.reshape import get_dummies #Note: requires Pandas 0.16 +
+    pitcher_subset = pitcher_df.drop('pitch_type', axis = 1)
+    pitcher_subset = get_dummies(pitcher_subset)
+    
     #split the data and store it in a dictionary
     pitcher_dict = {}
-    pitcher_dict['train_data'] = pitcher_df[pitcher_df[date_col] < date]
+    pitcher_dict['train_data'] = pitcher_subset[pitcher_subset[date_col] < date].drop(date_col, axis = 1)
     pitcher_dict['train_targets'] = pitcher_df['pitch_type'][pitcher_df[date_col] < date].astype('category')
-    pitcher_dict['test_data'] = pitcher_df[pitcher_df[date_col] >= date]
+    pitcher_dict['test_data'] = pitcher_subset[pitcher_subset[date_col] >= date].drop(date_col, axis = 1)
     pitcher_dict['test_targets'] = pitcher_df['pitch_type'][pitcher_df[date_col] >= date].astype('category')
     
     return pitcher_dict
