@@ -1,4 +1,5 @@
 import random
+import psycopg2
 
 
 def reservoir_sampling(N_population, n_samples):
@@ -12,7 +13,104 @@ def reservoir_sampling(N_population, n_samples):
                 results[k] = item
 
     return results
-	
+
+def create_rs_conn(config):
+    try:
+        conn = psycopg2.connect(dbname=config['dbname'], host=config['host'], port=config['port'], user=config['user'], password=config['pwd'])
+    except Exception as err:
+        print err.code, err
+    
+    return conn
+
+def get_available_rs_tables(cursor, *args, **kwargs):
+    query = """select distinct(tablename) from pg_table_def where schemaname = 'public';"""
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_atbat_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                atbat
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_game_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                game
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_hitchart_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                hitchart
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_player_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                player
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def get_rs_pitch_data(cursor, *args, **kwargs):
+    query = """
+            select
+                *
+            from
+                pitch
+            """
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def run_rs_query(cursor, query):
+    cur = cursor
+    cur.execute(query)
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    return header, rows
+
+def close_rs_conn(cursor, connection):
+    try:
+        cursor.close()
+        connection.close()
+    except Exception as err:
+        print err.code, err
+    
+    return "Redshift connection successfully closed!"
+
 def get_pitcher_sample(pitch_df, pitcher_id_col, sample_size = 25):
     '''Takes a Pandas DF with pitch data, samples a random subset of the pitchers present in the DF and returns the subset DF
     Input:
