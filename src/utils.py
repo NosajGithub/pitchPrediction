@@ -1,5 +1,10 @@
 import random
 import psycopg2
+from sklearn.externals import joblib
+from datetime import datetime
+import os
+from random import sample
+from collections import defaultdict, Counter
 
 
 def reservoir_sampling(N_population, n_samples):
@@ -120,8 +125,6 @@ def get_pitcher_sample(pitch_df, pitcher_id_col, sample_size = 25):
     Output:
         Pandas DF with subset of pitchers' data'''
     
-    from random import sample
-    
     #Get unique pitchers in DF
     pitchers = pitch_df[pitcher_id_col].unique()
     num_pitchers = len(pitchers)
@@ -164,8 +167,6 @@ def collect_classifier_predictions(data_dict, **kwargs):
 def ensemble_voting(predictions_dict):
     '''Takes in the predictions dictionary output from collect_classifier_predictions and returns pred with most votes'''
     
-    from collections import defaultdict, Counter
-    
     #Instantiate an object to hold the combined scores from each classifier
     scores = defaultdict(list)
     
@@ -186,11 +187,6 @@ def save_model(model, model_name, save_dir = '../models/', record_keeping_file =
     this function is called, it serializes 'model' to a file called 'model_name'.pickle in a newly created folder located
     in 'save_dir' and writes a log of the event as a new line in 'record_keeping_file'
     '''
-    
-    #Import the serializer and csv writer
-    import pickle
-    from datetime import datetime
-    import os
     
     #Create the new folder to house the model
     new_folder = save_dir + model_name
