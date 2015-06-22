@@ -258,3 +258,16 @@ def randomly_sample_pitchers(cursor, num_pitchers = 5, min_pitch_count = 600, se
     pitcher_df.columns = header
     
     return(pitcher_df)
+
+def convert_same_pitches(pitch_df):
+    '''According to http://www.beyondtheboxscore.com/2011/3/31/2068855/pitch-fx-primer, "FT" and "SI" are
+    the same pitch and "KC" and "CU" are the same pitch.  This function takes a Pandas pitch DF and converts
+    these pitch types to simply "FT" and "CU"
+    Input:
+        pitch_df: Pandas DF containing pitch_data with field "pitch_type"
+    Output: Pandas DF with corrected pitch types'''
+    
+    pitch_df.pitch_type[pitch_df.pitch_type == 'FT'] = 'SI'
+    pitch_df.pitch_type[pitch_df.pitch_type == 'KC'] = 'CU'
+    
+    return pitch_df
