@@ -1,5 +1,11 @@
 import random
 import psycopg2
+from sklearn.externals import joblib
+from datetime import datetime
+import os
+from random import sample, seed
+from collections import defaultdict, Counter
+import pandas as pd
 
 
 def reservoir_sampling(N_population, n_samples):
@@ -120,8 +126,6 @@ def get_pitcher_sample(pitch_df, pitcher_id_col, sample_size = 25):
     Output:
         Pandas DF with subset of pitchers' data'''
     
-    from random import sample
-    
     #Get unique pitchers in DF
     pitchers = pitch_df[pitcher_id_col].unique()
     num_pitchers = len(pitchers)
@@ -164,8 +168,6 @@ def collect_classifier_predictions(data_dict, **kwargs):
 def ensemble_voting(predictions_dict):
     '''Takes in the predictions dictionary output from collect_classifier_predictions and returns pred with most votes'''
     
-    from collections import defaultdict, Counter
-    
     #Instantiate an object to hold the combined scores from each classifier
     scores = defaultdict(list)
     
@@ -186,11 +188,6 @@ def save_model(model, model_name, save_dir = '../models/', record_keeping_file =
     this function is called, it serializes 'model' to a file called 'model_name'.pickle in a newly created folder located
     in 'save_dir' and writes a log of the event as a new line in 'record_keeping_file'
     '''
-    
-    #Import the serializer and csv writer
-    import pickle
-    from datetime import datetime
-    import os
     
     #Create the new folder to house the model
     new_folder = save_dir + model_name
@@ -220,3 +217,57 @@ def run_classifier(classifier, data_dict):
     
     # Return the dev performance score.
     return accuracy_score(data_dict['test_targets'], dev_predictions)
+
+def randomly_sample_pitchers(cursor, num_pitchers = 5, min_pitch_count = 600, seed_num = None):
+    '''Takes a random sample of pitchers from the db represented by "cursor" and returns a Pandas DF with
+    the specified number ofpitchers who have thrown at least "min_pitch_count" pitches
+    Input:
+        cursor: DB handle
+        num_pitchers: The number of pitchers whose data you want returned
+        min_pitch_count: Minimum number of pitches a pitcher must have thrown in order to be considered in the 
+            random sampling
+        seed_num: If you want to be able to replicated the results, set a seed
+    Output: Pandas DF containing pitch data for the randomly sampled pitchers'''
+    
+    cur = cursor
+    
+    #Get all pitchers meeting the min pitches criterion
+    get_pitchers_query = '''SELECT pitcher, count(*)
+                        FROM all_pitch_data
+                        GROUP BY pitcher
+                        HAVING count(*) >= %d''' % min_pitch_count
+    cur.execute(get_pitchers_query)
+    
+    #Get all the pitcher ids and sample from them
+    if seed_num is not None:
+        seed(seed_num)
+    
+    pitcher_ids = [pitch_id for (pitch_id, counter) in cur.fetchall()]
+    pitcher_id_sample = sample(pitcher_ids, num_pitchers)
+    
+    #Grab all pitch data from these pitchers
+    get_pitches_query = '''SELECT *
+                            FROM all_pitch_data
+                            where pitcher in (%s)''' % str(pitcher_id_sample).strip('[]')
+    cur.execute(get_pitches_query)
+    
+    #Create Pandas DF and return it
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    pitcher_df = pd.DataFrame(rows)
+    pitcher_df.columns = header
+    
+    return(pitcher_df)
+
+def convert_same_pitches(pitch_df):
+    '''According to http://www.beyondtheboxscore.com/2011/3/31/2068855/pitch-fx-primer, "FT" and "SI" are
+    the same pitch and "KC" and "CU" are the same pitch.  This function takes a Pandas pitch DF and converts
+    these pitch types to simply "FT" and "CU"
+    Input:
+        pitch_df: Pandas DF containing pitch_data with field "pitch_type"
+    Output: Pandas DF with corrected pitch types'''
+    
+    pitch_df.pitch_type[pitch_df.pitch_type == 'FT'] = 'SI'
+    pitch_df.pitch_type[pitch_df.pitch_type == 'KC'] = 'CU'
+    
+    return pitch_df
