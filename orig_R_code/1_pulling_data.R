@@ -55,7 +55,8 @@ PullData_Catchers <- function(db) {
                 filter(current_position == 'C') %>%
                 filter(bat_order != "NA") %>%
                 select(gameday_link,type,boxname)
-        catchers$inning_side <- ifelse(catchers$type == "home","top","bottom")
-        catchers[,c("gameday_link","boxname","inning_side")]
+        catchers_collected <- collect(catchers)
+        catchers_collected$inning_side <- ifelse(catchers_collected$type == "home","top","bottom")
+        catchers_collected[,c("gameday_link","boxname","inning_side")]
 }
 
