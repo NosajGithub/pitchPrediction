@@ -120,14 +120,3 @@ def pitcher_priors(df):
     df = pc_counter.add_to_df(df,"_pc")
     df = pg_counter.add_to_df(df,"_pg")
     return df
-
-def make_features(df):
-    """Given a pandas dataframe with all the pitches for a single pitcher, 
-    make all the features
-    """
-    
-    df = pitcher_priors(df)
-    
-    # Add more feature creation functions here
-    
-    return df
