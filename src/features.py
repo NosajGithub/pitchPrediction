@@ -121,6 +121,29 @@ def pitcher_priors(df):
     df = pg_counter.add_to_df(df,"_pg")
     return df
 
+def append_ingame_pitch_count(pitch_df):
+	"""Add an ingame pitch count (number of cumulative pitches during appearance) for each pitch
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional ingame pitch count column
+    """
+    # Add column tracking sum of balls and strikes
+    pitch_df['temp'] = pitch_df['s'] + pitch_df['b'] + 1
+	
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'num', 'temp'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id'])
+
+	# Calculate and append ingame pitch count
+	pitch_df['pitch_count'] = pitch_grouped.cumcount()
+
+	pitch_df = pitch_df.drop('temp', axis=1)
+	return pitch_df
+	
+
 def make_features(df):
     """Given a pandas dataframe with all the pitches for a single pitcher, 
     make all the features
