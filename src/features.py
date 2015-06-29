@@ -121,6 +121,74 @@ def pitcher_priors(df):
     df = pg_counter.add_to_df(df,"_pg")
     return df
 
+def append_ingame_pitch_count(pitch_df):
+	"""Add an ingame pitch count (number of cumulative pitches during appearance) for each pitch
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional ingame pitch count column
+    """
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id'])
+
+	# Calculate and append ingame pitch count
+	pitch_df['ingame_pitch_count'] = pitch_grouped.cumcount()
+
+	return pitch_df
+
+def append_season_pitch_count(pitch_df):
+	"""Add a pitch count (number of cumulative pitches during season) for each pitch
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional ingame pitch count column
+    """
+    # Extract new column specifying season of game (year)
+    pitch_df['season'] = pd.to_datetime(pitch_df.ix[:, 'date']).dt.year
+
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'season'])
+
+	# Calculate and append season pitch count
+	pitch_df['season_pitch_count'] = pitch_grouped.cumcount()
+
+	return pitch_df
+
+def append_previous_pitches_features(pitch_df):
+	"""For each pitch, adds a set of features based on most recent (3) pitches
+
+	For the start_speed, end_speed, break_y, break_angle, and break_length, returns
+	the mean of the previous three pitches to append as separate columns. Also
+	extracts the three previous pitches and adds them as separate features.
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional columns for added features
+    """
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id'])
+
+	# Calculate and append mean start speed of last three pitches
+	pitch_df['prev_pitches_mean_start_speed'] = pitch_grouped['start_speed'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_end_speed'] = pitch_grouped['end_speed'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_y'] = pitch_grouped['break_y'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_angle'] = pitch_grouped['break_angle'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_length'] = pitch_grouped['break_length'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['last_pitch_type'] = pitch_grouped['pitch_type'].shift(1)
+	pitch_df['second_last_pitch_type'] = pitch_grouped['pitch_type'].shift(2)
+	pitch_df['third_last_pitch_type'] = pitch_grouped['pitch_type'].shift(3)
+
+	return pitch_df
+
 def make_features(df):
     """Given a pandas dataframe with all the pitches for a single pitcher, 
     make all the features
