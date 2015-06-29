@@ -148,14 +148,33 @@ def append_season_pitch_count(pitch_df):
     Returns:
         pitch_df (df): Pandas dataframe of pitches with additional ingame pitch count column
     """
+    # Extract new column specifying season of game (year)
     pitch_df['season'] = pd.to_datetime(pitch_df.ix[:, 'date']).dt.year
 
 	# Group pitches by pitcher and game and sort in time sequence
 	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
 	pitch_grouped = pitch_df.groupby(['pitcher', 'season'])
 
-	# Calculate and append ingame pitch count
+	# Calculate and append season pitch count
 	pitch_df['season_pitch_count'] = pitch_grouped.cumcount()
+
+	return pitch_df
+
+def append_previous_pitches_mean_start_speed(pitch_df):
+	"""Add the mean start speed for the last three pitches, for each pitch
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional column for mean start speed of previous pitches
+    """
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id'])
+
+	# Calculate and append mean start speed of last three pitches
+	pitch_df['prev_pitches_mean_start_speed'] = pitch_grouped['start_speed'].apply(pd.rolling_mean, 3, min_periods=2)
 
 	return pitch_df
 
