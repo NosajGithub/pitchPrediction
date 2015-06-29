@@ -160,21 +160,32 @@ def append_season_pitch_count(pitch_df):
 
 	return pitch_df
 
-def append_previous_pitches_mean_start_speed(pitch_df):
-	"""Add the mean start speed for the last three pitches, for each pitch
+def append_previous_pitches_features(pitch_df):
+	"""For each pitch, adds a set of features based on most recent (3) pitches
+
+	For the start_speed, end_speed, break_y, break_angle, and break_length, returns
+	the mean of the previous three pitches to append as separate columns. Also
+	extracts the three previous pitches and adds them as separate features.
 
     Args:
         pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
 
     Returns:
-        pitch_df (df): Pandas dataframe of pitches with additional column for mean start speed of previous pitches
+        pitch_df (df): Pandas dataframe of pitches with additional columns for added features
     """
 	# Group pitches by pitcher and game and sort in time sequence
 	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
 	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id'])
 
 	# Calculate and append mean start speed of last three pitches
-	pitch_df['prev_pitches_mean_start_speed'] = pitch_grouped['start_speed'].apply(pd.rolling_mean, 3, min_periods=2)
+	pitch_df['prev_pitches_mean_start_speed'] = pitch_grouped['start_speed'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_end_speed'] = pitch_grouped['end_speed'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_y'] = pitch_grouped['break_y'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_angle'] = pitch_grouped['break_angle'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['prev_pitches_mean_break_length'] = pitch_grouped['break_length'].apply(pd.rolling_mean, 3, min_periods=1).shift(1)
+	pitch_df['last_pitch_type'] = pitch_grouped['pitch_type'].shift(1)
+	pitch_df['second_last_pitch_type'] = pitch_grouped['pitch_type'].shift(2)
+	pitch_df['third_last_pitch_type'] = pitch_grouped['pitch_type'].shift(3)
 
 	return pitch_df
 
