@@ -121,13 +121,63 @@ def pitcher_priors(df):
     df = pg_counter.add_to_df(df,"_pg")
     return df
 
+def prepare_score_diff_df(df):
+    """Takes in a df with ALL pitches in games played by a particular pitcher, 
+    then fills out the home and away runs 
+    """
+    
+    class Score_Counter:
+        def __init__(self):
+            self.game_id = ""
+            self.home_score = 0
+            self.away_score = 0
+
+        def get_score(self, game_id, score, home_score, away_score):
+            # Initialize the counter at the start of a new game
+            if self.game_id != game_id:
+                self.home_score = 0
+                self.away_score = 0
+                self.game_id = game_id
+
+            # Update if there's a score on this pitch
+            if score == "T":
+                self.home_score = home_score
+                self.away_score = away_score
+
+            return (self.home_score, self.away_score)
+    
+    home_scores = [] 
+    away_scores = []
+    s_counter = Score_Counter()
+    
+    df = df.sort(['game_id','num','id'])
+    for index, row in df.iterrows():
+        (home_score, away_score) = s_counter.get_score(row['game_id'],row['score'], \
+                            row['home_team_runs'],row['away_team_runs'])
+        home_scores.append(home_score)
+        away_scores.append(away_score)
+    
+    df['home_score'] = home_scores
+    df['away_score'] = away_scores
+    
+    return df
+
+def make_score_diff(df):
+    """Given a dataframe with home and away runs filled out, makes the
+    score differential
+    """
+    df.loc[:,'score_diff'] = (df['home_score'] - df['away_score']) * \
+    (df['half'].apply(lambda x: 1 if x == 'top' else -1))
+    
+    return df
+
 def make_features(df):
     """Given a pandas dataframe with all the pitches for a single pitcher, 
     make all the features
     """
     
     df = pitcher_priors(df)
-    
+    df = make_score_diff(df)
     # Add more feature creation functions here
     
     return df
