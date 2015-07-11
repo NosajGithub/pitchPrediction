@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from utils import run_rs_query
 
 class Prior_Counter:
     def __init__(self, pitch_list):
@@ -190,7 +191,7 @@ def append_ingame_pitch_count(pitch_df):
 	return pitch_df
 
 def append_season_pitch_count(pitch_df):
-	"""Add a pitch count (number of cumulative pitches during season) for each pitch
+    """Add a pitch count (number of cumulative pitches during season) for each pitch
 
     Args:
         pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
@@ -201,14 +202,14 @@ def append_season_pitch_count(pitch_df):
     # Extract new column specifying season of game (year)
     pitch_df['season'] = pd.to_datetime(pitch_df.ix[:, 'date']).dt.year
 
-	# Group pitches by pitcher and game and sort in time sequence
-	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
-	pitch_grouped = pitch_df.groupby(['pitcher', 'season'])
+    # Group pitches by pitcher and game and sort in time sequence
+    pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+    pitch_grouped = pitch_df.groupby(['pitcher', 'season'])
 
-	# Calculate and append season pitch count
-	pitch_df['season_pitch_count'] = pitch_grouped.cumcount()
+    # Calculate and append season pitch count
+    pitch_df['season_pitch_count'] = pitch_grouped.cumcount()
 
-	return pitch_df
+    return pitch_df
 
 def append_previous_pitches_features(pitch_df):
 	"""For each pitch, adds a set of features based on most recent (3) pitches
@@ -238,14 +239,148 @@ def append_previous_pitches_features(pitch_df):
 	pitch_df['third_last_pitch_type'] = pitch_grouped['pitch_type'].shift(3)
 
 	return pitch_df
+
+def roll_forward_outs(group):
+    '''Function called in "fix_outs" which is applied to each grouping to correct the number of outs'''
+    
+    #Get the unique atbats
+    unique_at_bats = group['num'].unique()
+    
+    #Loop through batters from end of inning to beginning
+    for i in reversed(range(1, len(group['num'].unique()))):
+        
+        group.loc[group['num'] == unique_at_bats[i], 'o'] = group['o'][group['num'] == unique_at_bats[i - 1]].unique()[0]
+    
+    #Set the outs for the first batter of the inning ot 0
+    group.loc[group['num'] == unique_at_bats[0], 'o'] = 0
+    return group
+
+def fix_outs(pitch_df):
+    '''Rolls outs forward one batter
+    Input:
+        pitch_df: Pandas dataframe containing joined pitch/atbat/game data
+    Output: Pandas df with the outs adjusted to be indicative of the game state at the time of the pitch
+    '''
+    
+    #Group the dataframe by game, inning, and half
+    pitch_df = pitch_df.sort(['game_id', 'inning', 'half', 'num'])
+    grouped = pitch_df.groupby(['game_id', 'inning', 'half'])
+    
+    #Roll forward the outs
+    pitch_df = grouped.apply(roll_forward_outs)
+    
+    return pitch_df
+
+def binarize_on_base(df):
+    
+    df['on_1b'] = np.where(df['on_1b'].isnull(), 0, 1)
+    df['on_2b'] = np.where(df['on_2b'].isnull(), 0, 1)
+    df['on_3b'] = np.where(df['on_3b'].isnull(), 0, 1)
+    
+    return df
 	
 def make_features(df):
     """Given a pandas dataframe with all the pitches for a single pitcher, 
     make all the features
     """
     
+    #Jason's features
     df = pitcher_priors(df)
+    df = prepare_score_diff_df(df)
     df = make_score_diff(df)
+
+    #Alan's features
+    df = append_ingame_pitch_count(df)
+    df = append_season_pitch_count(df)
+    df = append_previous_pitches_features(df)
+
+    #Zach's features
+    df = fix_outs(df)
     # Add more feature creation functions here
     
     return df
+
+def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclude_cols = None, date_subsetting = True):
+    """
+    This function takes in a pitcher's ID and creates a data frame that is ready for modeling.  The features
+    created with this function or determined by the 'make_features' function.
+
+    Inputs:
+        cur: Redshift db cursor
+        pitcher_id: numeric pitcher id
+        binarize_pitches: indicates whether or not the pitches should be split into Fastball/Offspeed or not
+        exclude_cols: List of strings of any additional columns to exclude from the df that's returned
+        date_subsetting: Boolean that determines whether or not to subset the data based on our
+        data integrity issue with missing games
+    Returns: A Pandas dataframe containing only columns which are useful for modeling
+    """
+    
+    #Get the pitchers info from redshift and stor it
+    raw_query = """SELECT * FROM all_pitch_data \
+    WHERE game_id IN \
+    (SELECT DISTINCT game_id FROM all_pitch_data \
+    WHERE pitcher = %d)
+    """ % pitcher_id
+    sample_header, sample_rows = run_rs_query(cur, raw_query)
+    pitch_df = pd.DataFrame(sample_rows)
+    pitch_df.columns = sample_header
+    
+    #Convert the date to a pandas datetime object
+    pitch_df['date'] = pd.to_datetime(pitch_df['date'], '%Y-%m-%d')
+    
+    #Subset down to dates with correct data, if applicable
+    if date_subsetting:
+        #subset down after 2008 and before 2013 because of data integrity issues
+        pitch_df = pitch_df[(pitch_df['date'] >= '2009-01-01') &
+                            (pitch_df['date'] <= '2013-01-01')]
+    
+    #Binarize pitch type, if applicable
+    if binarize_pitches:
+        pitch_df['pitch_type'] = np.where(pitch_df['pitch_type'].isin(['FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF']), 
+                                              'Fastball', 
+                                              'Not_Fastball')
+        
+    #Make all the features encapsulated in the 'make_features' function
+    pitch_df = make_features(pitch_df)
+    
+    #Remove pitches not containing metadata and tell the user how many were removed
+    to_be_removed = len(pitch_df[pitch_df['type_confidence'].isnull()])
+    pitch_df = pitch_df[pitch_df['type_confidence'].notnull()]
+    print to_be_removed, "rows didn't contain pitch metadata and were removed"
+    
+    #Binarize the on-base variables
+    pitch_df = binarize_on_base(pitch_df)
+    
+    #Get rid of columns that aren't useful for modeling
+    cols_to_exclude = [u'game_id', u'num', u'pitcher', u'batter',
+                    u'des', u'id', u'type', u'x', u'y', u'sv_id',
+                    u'start_speed', u'end_speed', u'sz_top', u'sz_bot',
+                    u'pfx_x', u'pfx_z', u'px', u'pz', u'x0', u'y0', 
+                    u'z0', u'vx0', u'vy0', u'vz0', u'ax', u'ay', u'az', 
+                    u'break_y', u'break_angle', u'break_length', 
+                    u'type_confidence', u'spin_dir', u'spin_rate', u'zone',
+                    u'half', u'inning', u'score', u'b_height', 
+                    u'event', u'event2', u'event3', u'home_team_runs', 
+                    u'away_team_runs', u'p_first_name', u'p_last_name', 
+                    u'p_height', u'pitcher_dob', u'b_first_name', 
+                    u'b_last_name', u'batter_dob', u'game_type', 
+                    u'local_game_time', u'game_pk', u'game_time_et', 
+                    u'home_id', u'home_fname', u'away_id', u'away_fname',
+                    u'status_ind', u'day']
+    pitch_df = pitch_df.drop(cols_to_exclude, axis = 1)
+    
+    #Check to see if the user has specified additional cols to drop
+    if exclude_cols is not None:
+        pitch_df = pitch_df.drop(exclude_cols, axis = 1)
+    
+    #Recategorize some variables that couldn't be calculated
+    pitch_df['last_pitch_type'].loc[pitch_df['last_pitch_type'].isnull()] = 'not_available'
+    pitch_df['second_last_pitch_type'].loc[pitch_df['second_last_pitch_type'].isnull()] = 'not_available'
+    pitch_df['third_last_pitch_type'].loc[pitch_df['third_last_pitch_type'].isnull()] = 'not_available'
+    
+    #Get rid of any rows that contain NAs
+    num_of_na = pitch_df.isnull().any(axis = 1).sum()
+    pitch_df = pitch_df.dropna()
+    print num_of_na, "rows contained at least 1 NaN and were dropped"
+    
+    return pitch_df
