@@ -1,2 +1,3 @@
-model_name,serialized_filepath,creation_date
-verlander_rf_testing_function_zb,../../models/verlander_rf_testing_function_zb/verlander_rf_testing_function_zb.pickle,2015-06-20 12:43:48.429000
+rf_test,models/rf_test/rf_test.pickle,2015-07-12 21:26:20.517000
+rf_test,models/rf_test/rf_test.pickle,2015-07-12 22:05:59.323000
+rf_test,models/rf_test/rf_test.pickle,2015-07-12 22:07:22.351000

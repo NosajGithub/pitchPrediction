@@ -6,6 +6,7 @@ import os
 from random import sample, seed
 from collections import defaultdict, Counter
 import pandas as pd
+import csv
 
 
 def reservoir_sampling(N_population, n_samples):
@@ -183,10 +184,18 @@ def ensemble_voting(predictions_dict):
     
     return pd.Series(final_preds, dtype = 'object')
 
-def save_model(model, model_name, save_dir = '../models/', record_keeping_file = '../models/record_keeping.csv'):
+def save_model(model, model_name, save_dir = 'models/', record_keeping_file = 'models/record_keeping.csv'):
     '''In order to manage our models, we need to keep track of where and when they came from. Each time
     this function is called, it serializes 'model' to a file called 'model_name'.pickle in a newly created folder located
     in 'save_dir' and writes a log of the event as a new line in 'record_keeping_file'
+
+    Input:
+        model: model object created using scikit-learn
+        model_name: the name you'd like to give the model; this name will be the name of the new_folder
+            created to house the model
+        save_dir: the filepath of the directory in which to save the model (defaults to 'models/')
+        record_keeping_file: the filepath of the file which keeps a record (name and date) of all created models
+            (defaults to 'models/record_keeping.csv')
     '''
     
     #Create the new folder to house the model
@@ -271,3 +280,27 @@ def convert_same_pitches(pitch_df):
     pitch_df.pitch_type[pitch_df.pitch_type == 'KC'] = 'CU'
     
     return pitch_df
+
+def load_model(model_name, record_keeping_file = 'models/record_keeping.csv'):
+    '''This function takes in the name of a model and searches record_keeping_file
+    for that name. It then tries to load and return the model (the last instance listed in record_keeping_file
+    if there are more than one).  It requires that you run this function from the root directory of our project.
+    
+    Inputs:
+        model_name: string of the model's name as it appears in record_keeping_file
+        record_keeping_file: the filename of the file that holds the record keeping info for saved models
+            (defaults to 'models/record_keeping.csv')
+            
+    Returns: De-serialized model matching the name of model_name    
+    '''
+    
+    #open the record keeping file and get the filepath of the last instance where model_name occurs
+    with open(record_keeping_file, 'rb') as f:
+        reader = csv.reader(f, delimiter = ',')
+        for row in reader:
+            print row[0]
+            if row[0] == model_name:
+                model_fp = row[1]
+    
+    #Return the model
+    return joblib.load(model_fp)
