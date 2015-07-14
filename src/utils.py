@@ -6,6 +6,7 @@ import os
 from random import sample, seed
 from collections import defaultdict, Counter
 import pandas as pd
+from sklearn.metrics import accuracy_score
 
 
 def reservoir_sampling(N_population, n_samples):
