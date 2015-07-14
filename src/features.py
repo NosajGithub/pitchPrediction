@@ -286,7 +286,6 @@ def make_features(df):
     
     #Jason's features
     df = pitcher_priors(df)
-    df = prepare_score_diff_df(df)
     df = make_score_diff(df)
 
     #Alan's features
@@ -324,6 +323,13 @@ def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclud
     sample_header, sample_rows = run_rs_query(cur, raw_query)
     pitch_df = pd.DataFrame(sample_rows)
     pitch_df.columns = sample_header
+    
+    
+    # Add the home and away score at the pitch level to set up score_diff
+    pitch_df = prepare_score_diff_df(pitch_df)
+    
+    # Limit to only the pitcher in question
+    pitch_df = pitch_df[pitch_df['pitcher'] == pitcher_id]
     
     #Convert the date to a pandas datetime object
     pitch_df['date'] = pd.to_datetime(pitch_df['date'], '%Y-%m-%d')
@@ -366,7 +372,7 @@ def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclud
                     u'b_last_name', u'batter_dob', u'game_type', 
                     u'local_game_time', u'game_pk', u'game_time_et', 
                     u'home_id', u'home_fname', u'away_id', u'away_fname',
-                    u'status_ind', u'day']
+                    u'status_ind', u'day','home_score','away_score','p_throws_L']
     pitch_df = pitch_df.drop(cols_to_exclude, axis = 1)
     
     #Check to see if the user has specified additional cols to drop
