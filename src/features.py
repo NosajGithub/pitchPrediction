@@ -372,7 +372,7 @@ def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclud
                     u'b_last_name', u'batter_dob', u'game_type', 
                     u'local_game_time', u'game_pk', u'game_time_et', 
                     u'home_id', u'home_fname', u'away_id', u'away_fname',
-                    u'status_ind', u'day','home_score','away_score','p_throws_L']
+                    u'status_ind', u'day','home_score','away_score']
     pitch_df = pitch_df.drop(cols_to_exclude, axis = 1)
     
     #Check to see if the user has specified additional cols to drop
