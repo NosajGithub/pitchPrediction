@@ -352,8 +352,7 @@ def randomly_sample_pitchers2(cursor, num_pitchers = 5, min_pitch_count = 600, m
         min_pitch_count: Minimum number of pitches a pitcher must have thrown in order to be considered in the 
             random sampling
         seed_num: If you want to be able to replicated the results, set a seed
-    Output: Pandas DF containing pitch data for the randomly sampled pitchers'''
-    
+    Output: Pandas DF containing pitcher ids, the number of pitches they've thrown and their max pitch date'''
     cur = cursor
     
     #Get all pitchers meeting the min pitches criterion
