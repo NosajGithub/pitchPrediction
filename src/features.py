@@ -299,7 +299,7 @@ def make_features(df):
     
     return df
 
-def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclude_cols = None, date_subsetting = True):
+def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclude_cols = None, date_subsetting = True, table = None):
     """
     This function takes in a pitcher's ID and creates a data frame that is ready for modeling.  The features
     created with this function or determined by the 'make_features' function.
@@ -314,12 +314,20 @@ def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclud
     Returns: A Pandas dataframe containing only columns which are useful for modeling
     """
     
-    #Get the pitchers info from redshift and stor it
-    raw_query = """SELECT * FROM all_pitch_data \
-    WHERE game_id IN \
-    (SELECT DISTINCT game_id FROM all_pitch_data \
-    WHERE pitcher = %d)
-    """ % pitcher_id
+    #Get the pitchers info from redshift and store it
+    if table is None:
+        raw_query = """SELECT * FROM all_pitch_data \
+        WHERE game_id IN \
+        (SELECT DISTINCT game_id FROM all_pitch_data \
+        WHERE pitcher = %d)
+        """ % pitcher_id
+
+    else:
+        raw_query = """SELECT * FROM %s \
+        WHERE game_id IN \
+        (SELECT DISTINCT game_id FROM %s \
+        WHERE pitcher = %d)
+        """ % (table, table, pitcher_id)
     sample_header, sample_rows = run_rs_query(cur, raw_query)
     pitch_df = pd.DataFrame(sample_rows)
     pitch_df.columns = sample_header
@@ -384,6 +392,11 @@ def get_pitcher_df_for_modeling(cur, pitcher_id, binarize_pitches = True, exclud
     pitch_df['second_last_pitch_type'].loc[pitch_df['second_last_pitch_type'].isnull()] = 'not_available'
     pitch_df['third_last_pitch_type'].loc[pitch_df['third_last_pitch_type'].isnull()] = 'not_available'
     
+    #Convert 'season' to a categorical indicating current season (or not)
+    if u'season' in pitch_df.columns:
+        pitch_df['cur_season'] = np.where(pitch_df['season'] == pitch_df['season'].max(), 1, 0)
+        pitch_df.drop('season', axis = 1, inplace = True)
+
     #Get rid of any rows that contain NAs
     num_of_na = pitch_df.isnull().any(axis = 1).sum()
     pitch_df = pitch_df.dropna()
