@@ -240,6 +240,50 @@ def append_previous_pitches_features(pitch_df):
 
 	return pitch_df
 
+def append_pitch_momentum_features(pitch_df):
+	"""For each pitch, adds a set of features based on most recent (3) pitches of the same type
+
+	For the start_speed, end_speed, break_y, break_angle, and break_length, returns
+	the mean of the previous three pitches to append as separate columns. Also
+	extracts the three previous pitches and adds them as separate features.
+
+    Args:
+        pitch_df (df): Pandas dataframe of pitches across multiple games for one or more pitchers
+
+    Returns:
+        pitch_df (df): Pandas dataframe of pitches with additional columns for added features
+    """
+	# Group pitches by pitcher and game and sort in time sequence
+	pitch_df = pitch_df.sort(['pitcher', 'game_id', 'id'])
+	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id', 'pitch_type'])
+
+	# Catalog event by common result
+    strikeout_events = ['Strikeout', 'Strikeout - DP']
+   	hit_events = ['Single', 'Double', 'Triple']
+    homerun_events = ['Home Run']
+    walk_events = ['Hit By Pitch', 'Walk']
+    infield_out_events = ['Ground Out', 'Grounded Into DP', 'Groundout', 'Bunt Groundout', 'Bunt Lineout', 'Bunt Pop Out', 'Sacrifice Bunt DP', 'Triple Play', 'Fielders Choice Out', 'Force Out', 'Forceout', 'Double Play', 'Fielders Choice', 'Sac Bunt']
+    outfield_out_events = ['Sac Fly', 'Sac Fly DP', 'Line Out', 'Lineout', 'Pop Out', 'Fly Out', 'Flyout']
+    other_events = ['null', 'Batter Interference', 'Catcher Interference', 'Fan interference', 'Field Error', 'Intent Walk', 'Runner Out']
+
+    # Initialize momentum features
+	pitch_df['prev_pitch_strikeout_event'] = 0
+	pitch_df['prev_pitch_infield_out_event'] = 0
+	pitch_df['prev_pitch_outfield_out_event'] = 0
+	pitch_df['prev_pitch_walk_event'] = 0
+	pitch_df['prev_pitch_hit_event'] = 0
+	pitch_df['prev_pitch_homerun_event'] = 0
+
+	# Update momentum features to reflect result (event) associated with most recent pitch of same type
+	pitch_df.loc[df['event'].shift(1).isin(strikeout_events), 'prev_pitch_strikeout_event'] = 1
+	pitch_df.loc[df['event'].shift(1).isin(infield_out_events), 'prev_pitch_infield_out_event'] = 1
+	pitch_df.loc[df['event'].shift(1).isin(outfield_out_events), 'prev_pitch_outfield_out_event'] = 1
+	pitch_df.loc[df['event'].shift(1).isin(walk_events), 'prev_pitch_walk_event'] = 1
+	pitch_df.loc[df['event'].shift(1).isin(hit_events), 'prev_pitch_hit_event'] = 1
+	pitch_df.loc[df['event'].shift(1).isin(homerun_events), 'prev_pitch_homerun_event'] = 1
+
+	return pitch_df
+
 def roll_forward_outs(group):
     '''Function called in "fix_outs" which is applied to each grouping to correct the number of outs'''
     
