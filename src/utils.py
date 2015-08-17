@@ -495,15 +495,15 @@ def randomly_sample_pitchers3(cursor, num_pitchers = 5, min_pitch_count = 600, m
                     p_last_name,
                     COUNT(*) as tot_pitch_count,
                     MAX(date) as maximum_date,
-                    AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.0
-                        ELSE 0.0 END) as fastball_perc
+                    AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.00
+                        ELSE 0.00 END) as fastball_perc
                 FROM 
                     all_pitch_data
                 GROUP BY pitcher, p_first_name, p_last_name
                 HAVING count(*) >= %d AND 
                 MAX(date) > '%s' AND
-                AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.0
-                        ELSE 0.0 END) BETWEEN 0.4 AND 0.6
+                AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.00
+                        ELSE 0.00 END) BETWEEN 0.4 AND 0.6
                 ORDER BY pitcher''' % (min_pitch_count, min_date)
     cur.execute(get_pitchers_query)
     
