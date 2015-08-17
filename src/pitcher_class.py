@@ -65,10 +65,40 @@ class Pitcher:
         #initiate a list that keeps track of methods called on the object (record-keeping)
         self.method_history = []    
             
-    def find_optimal_date_splits(self):
-        '''Jason's code here'''
-        self.method_history.append("split_test_train")
-        
+    def find_optimal_date_splits(self, test_quantile = .9):
+        '''Tests out different date splits and returns the best one'''
+
+        ## Train on the 90% and test on the last 10% and 
+        pitcher_df = self.data
+        subset_date = str(pitcher_df['date'].quantile(test_quantile))[:10]
+
+        ## Get datasets at 20% cutoff intervals - the whole thing, the last 80%, the last 60%, etc.
+        train_df = pitcher_df[pitcher_df['date'] < subset_date]
+        train_cutoffs = {i: str(train_df['date'].quantile(i))[:10] for i in [0, .2, .4, .6, .8]}
+        train_cutoff_dfs = {value: pitcher_df[pitcher_df['date'] > value] for key, value in train_cutoffs.iteritems()}
+
+        ## Try out each split
+        best_date = None
+        best_accuracy = 0
+
+        for date, dataset in train_cutoff_dfs.iteritems():
+            modeling_data = split_test_train(dataset, subset_date)
+            rf = (RandomForestClassifier(max_depth=3,
+                                min_samples_leaf = 7,
+                                min_samples_split = 6,
+                                n_estimators = 350).fit(modeling_data['train_data'], modeling_data['train_targets']))
+
+            preds = rf.predict(modeling_data['test_data'])              
+            new_acc = accuracy_score(modeling_data['test_targets'], preds)      
+
+            # print date, new_acc
+            if new_acc > best_accuracy:
+                    best_accuracy = new_acc
+                    best_date = date
+
+        self.method_history.append("find_optimal_date_splits")
+        return best_date        
+    
     def subset_data_by_date(self, max_date = None, min_date = '2008-01-01'):
         '''Subsets self.data based on max and min dates'''
         
