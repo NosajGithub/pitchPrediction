@@ -184,7 +184,7 @@ class Pitcher:
         for classifier in self.classifiers.keys():
 
             # Make predictions on new data
-            pred_dict[classifier] = self.classifier[classifier].predict(new_data)
+            pred_dict[classifier] = self.classifiers[classifier].predict(new_data)
             
         #Vote based on the predictions
         return ensemble_voting(pred_dict)
