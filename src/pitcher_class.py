@@ -7,6 +7,9 @@ from features import *
 from utils import *
 from exploration import *
 
+from sklearn.metrics import accuracy_score
+from sklearn.ensemble import RandomForestClassifier
+
 #Define the class
 from datetime import date
 
