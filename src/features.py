@@ -258,13 +258,13 @@ def append_pitch_momentum_features(pitch_df):
 	pitch_grouped = pitch_df.groupby(['pitcher', 'game_id', 'pitch_type'])
 
 	# Catalog event by common result
-    strikeout_events = ['Strikeout', 'Strikeout - DP']
+	strikeout_events = ['Strikeout', 'Strikeout - DP']
    	hit_events = ['Single', 'Double', 'Triple']
-    homerun_events = ['Home Run']
-    walk_events = ['Hit By Pitch', 'Walk']
-    infield_out_events = ['Ground Out', 'Grounded Into DP', 'Groundout', 'Bunt Groundout', 'Bunt Lineout', 'Bunt Pop Out', 'Sacrifice Bunt DP', 'Triple Play', 'Fielders Choice Out', 'Force Out', 'Forceout', 'Double Play', 'Fielders Choice', 'Sac Bunt']
-    outfield_out_events = ['Sac Fly', 'Sac Fly DP', 'Line Out', 'Lineout', 'Pop Out', 'Fly Out', 'Flyout']
-    other_events = ['null', 'Batter Interference', 'Catcher Interference', 'Fan interference', 'Field Error', 'Intent Walk', 'Runner Out']
+	homerun_events = ['Home Run']
+	walk_events = ['Hit By Pitch', 'Walk']
+	infield_out_events = ['Ground Out', 'Grounded Into DP', 'Groundout', 'Bunt Groundout', 'Bunt Lineout', 'Bunt Pop Out', 'Sacrifice Bunt DP', 'Triple Play', 'Fielders Choice Out', 'Force Out', 'Forceout', 'Double Play', 'Fielders Choice', 'Sac Bunt']
+	outfield_out_events = ['Sac Fly', 'Sac Fly DP', 'Line Out', 'Lineout', 'Pop Out', 'Fly Out', 'Flyout']
+	other_events = ['null', 'Batter Interference', 'Catcher Interference', 'Fan interference', 'Field Error', 'Intent Walk', 'Runner Out']
 
     # Initialize momentum features
 	pitch_df['prev_pitch_strikeout_event'] = 0
