@@ -476,3 +476,48 @@ def choose_best_ensemble(pred_dict, modeling_dict):
     
     return {'best_acc' : best_accuracy,
             'classifier_combination' : classifier_combo}
+
+def randomly_sample_pitchers3(cursor, num_pitchers = 5, min_pitch_count = 600, min_date = '2015-01-01', seed_num = None):
+    '''Takes a random sample of pitchers from the db represented by "cursor" and returns a Pandas DF with
+    the specified number ofpitchers who have thrown at least "min_pitch_count" pitches
+    Input:
+        cursor: DB handle
+        num_pitchers: The number of pitchers whose data you want returned
+        min_pitch_count: Minimum number of pitches a pitcher must have thrown in order to be considered in the 
+            random sampling
+        seed_num: If you want to be able to replicated the results, set a seed
+    Output: Pandas DF containing pitcher ids, the number of pitches they've thrown and their max pitch date'''
+    cur = cursor
+    
+    #Get all pitchers meeting the min pitches criterion
+    get_pitchers_query = '''SELECT pitcher,
+                    p_first_name,
+                    p_last_name,
+                    COUNT(*) as tot_pitch_count,
+                    MAX(date) as maximum_date,
+                    AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.0
+                        ELSE 0.0 END) as fastball_perc
+                FROM 
+                    all_pitch_data
+                GROUP BY pitcher, p_first_name, p_last_name
+                HAVING count(*) >= %d AND 
+                MAX(date) > '%s' AND
+                AVG(CASE WHEN pitch_type IN ('FA', 'FF', 'FT', 'FC', 'FS', 'SI', 'SF') THEN 1.0
+                        ELSE 0.0 END) BETWEEN 0.4 AND 0.6
+                ORDER BY pitcher''' % (min_pitch_count, min_date)
+    cur.execute(get_pitchers_query)
+    
+    #Get all the pitcher ids and sample from them
+    if seed_num is not None:
+        seed(seed_num)
+    
+    rows = cur.fetchall()
+    header = [colnames[0] for colnames in cur.description]
+    pitcher_df = pd.DataFrame(rows)
+    pitcher_df.columns = header
+    
+    pitcher_id_sample = sample(pitcher_df['pitcher'].values, num_pitchers)
+    
+    pitcher_df = pitcher_df[pitcher_df['pitcher'].isin(pitcher_id_sample)]
+    
+    return pitcher_df
