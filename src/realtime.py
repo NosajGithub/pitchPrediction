@@ -219,14 +219,14 @@ def get_pitcher_df_for_realtime(pitcher_id, binarize_pitches = True, cols_of_int
         new_pitches: a dataframe of pitches from the current game to append to the pitcher's past pitches
     Returns: A Pandas dataframe containing only columns which are useful for modeling
     """
-        
+    if new_pitches is not None:
     # Append new data to old data
-    pitch_df = pitch_df.set_index(['game_id','num','id'])
-    new_pitches = new_pitches.set_index(['game_id','num','id'])
+        pitch_df = pitch_df.set_index(['game_id','num','id'])
+        new_pitches = new_pitches.set_index(['game_id','num','id'])
 
-    pitch_df = pitch_df.append(new_pitches)
-    pitch_df = pitch_df.reset_index()
-    pitch_df.sort(['game_id','num','id'])
+        pitch_df = pitch_df.append(new_pitches)
+        pitch_df = pitch_df.reset_index()
+        pitch_df.sort(['game_id','num','id'])
     
     # Add the home and away score at the pitch level to set up score_diff
     pitch_df = prepare_score_diff_df(pitch_df)
@@ -302,6 +302,49 @@ def get_pitcher_df_for_realtime(pitcher_id, binarize_pitches = True, cols_of_int
     
     return pitch_df
 
+def find_optimal_date_splits(pitcher_df, test_quantile = .9):
+    '''Tests out different date splits and returns the best one'''
+
+    ## Train on the 90% and test on the last 10% and 
+    subset_date = str(pitcher_df['date'].quantile(test_quantile))[:10]
+
+    ## Get datasets at 20% cutoff intervals - the whole thing, the last 80%, the last 60%, etc.
+    train_df = pitcher_df[pitcher_df['date'] < subset_date]
+    train_cutoffs = {i: str(train_df['date'].quantile(i))[:10] for i in [0, .2, .4, .6, .8]}
+    train_cutoff_dfs = {value: pitcher_df[pitcher_df['date'] > value] for key, value in train_cutoffs.iteritems()}
+
+    ## Try out each split
+    best_date = None
+    best_accuracy = 0
+
+    for date, dataset in train_cutoff_dfs.iteritems():
+        modeling_data = split_test_train(dataset, subset_date)
+        rf = (RandomForestClassifier(max_depth=3,
+                            min_samples_leaf = 7,
+                            min_samples_split = 6,
+                            n_estimators = 350).fit(modeling_data['train_data'], modeling_data['train_targets']))
+
+        preds = rf.predict(modeling_data['test_data'])              
+        new_acc = accuracy_score(modeling_data['test_targets'], preds)      
+
+        # print date, new_acc
+        if new_acc > best_accuracy:
+                best_accuracy = new_acc
+                best_date = date
+
+    return best_date
+
+def subset_data_by_date(pitch_df, max_date = None, min_date = '2008-01-01'):
+    '''Subsets data based on max and min dates'''
+
+    #Get a max_date if one not given
+    if max_date is None:
+        max_date = date.today().strftime('%Y-%m-%d')
+    else:
+        max_date = max_date
+
+    #Subset the data
+    return pitch_df[(pitch_df['date'] <= max_date) & (pitch_df['date'] >= min_date)]
 
 class Prediction_Machine:
     """ Class to take in the historical data and then combine it with new data in order to output new predictions"""
@@ -338,6 +381,48 @@ class Prediction_Machine:
         self.pitcher = pitcher
         self.pitch_df = pitch_df
         self.game_date = game_date
+        self.classifiers = self.make_classifiers()
+    
+    def make_classifiers(self):
+        pitcher_df = get_pitcher_df_for_realtime(pitcher_id = self.pitcher, 
+                                            cols_of_interest = self.cols_of_interest, 
+                                            date_subsetting = False, pitch_df = self.pitch_df, 
+                                            new_pitches = None)
+
+        best_date = find_optimal_date_splits(pitcher_df)
+        pitcher_df = subset_data_by_date(pitcher_df, min_date = best_date)
+
+        split_date = str(pitcher_df['date'].quantile(.9))[:10]
+        modeling_data = split_test_train(pitcher_df, split_date)
+
+        #Subset the dataframe down to the columns of interest
+        baseline_dict = subset_data(modeling_data, self.cols_of_interest2)
+
+        #Run 4 classifiers on the data (returns dictionary containing all fitted classifiers)
+        classifier_dict = run_all_classifiers(baseline_dict)
+        all_predictions_dict = collect_classifier_predictions2(baseline_dict, classifier_dict)
+        best_classifiers = choose_best_ensemble(all_predictions_dict, baseline_dict)
+
+        #Handle cases where there's a single classifier chosen
+        if type(best_classifiers['classifier_combination']) == str:            
+            single_class = best_classifiers['classifier_combination']
+            classifiers = {single_class: classifier_dict[single_class]}    
+        else:    
+            classifiers = dict((k, classifier_dict[k]) for k in best_classifiers['classifier_combination'])
+
+        return classifiers
+    
+    def make_predictions(self, new_data):
+        pred_dict = {}
+
+        #Make predictions based for each classifier
+        for classifier in self.classifiers.keys():
+
+        # Make predictions on new data
+            pred_dict[classifier] = self.classifiers[classifier].predict(new_data)
+
+        #Vote based on the predictions
+        return ensemble_voting(pred_dict)
 
     def get_new_pred(self, new_pitches):
         """Takes in a set of real-time pitches and outputs the predictions and the targets"""
@@ -354,9 +439,7 @@ class Prediction_Machine:
         #Subset the dataframe down to the columns of interest
         baseline_dict = subset_data(modeling_data, self.cols_of_interest2)
 
-        #Run 4 classifiers on the data (returns dictionary containing all fitted classifiers)
-        classifier_dict = run_all_classifiers(baseline_dict)
+        #Run classifiers on the data (returns dictionary containing all fitted classifiers)
+        preds = self.make_predictions(baseline_dict['test_data'])
 
-        lin_svc_preds = classifier_dict['lin_svc'].predict(baseline_dict['test_data'])
-
-        return lin_svc_preds, baseline_dict['test_targets']
+        return preds, baseline_dict['test_targets']
